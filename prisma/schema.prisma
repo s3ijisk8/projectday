@@ -10,27 +10,27 @@ datasource db {
 }
 
 model User {
-  id             String        @id @default(cuid())
-  email          String        @unique
-  username       String        @unique
-  passwordHash   String?
-  image          String?
-  avatarConfig   Json?
-  archetype      String
-  bio            String?
-  homeLat        Float?
-  homeLng        Float?
-  friends        User[]        @relation("UserFriends")
-  friendOf       User[]        @relation("UserFriends")
-  savedItems     SavedItem[]
-  activities     Activity[]    @relation("ActivityAuthor")
-  locations      Location[]    @relation("LocationAuthor")
-  itineraries    Itinerary[]   @relation("ItineraryAuthor")
-  journals       Journal[]     @relation("JournalAuthor")
-  reviews        Review[]
-  createdAt      DateTime      @default(now())
-  accounts       Account[]
-  sessions       Session[]
+  id           String      @id @default(cuid())
+  email        String      @unique
+  username     String      @unique
+  passwordHash String?
+  image        String?
+  avatarConfig Json?
+  archetype    String
+  bio          String?
+  homeLat      Float?
+  homeLng      Float?
+  friends      User[]      @relation("UserFriends")
+  friendOf     User[]      @relation("UserFriends")
+  savedItems   SavedItem[]
+  activities   Activity[]  @relation("ActivityAuthor")
+  locations    Location[]  @relation("LocationAuthor")
+  itineraries  Itinerary[] @relation("ItineraryAuthor")
+  journals     Journal[]   @relation("JournalAuthor")
+  reviews      Review[]
+  createdAt    DateTime    @default(now())
+  accounts     Account[]
+  sessions     Session[]
 }
 
 model Account {
@@ -79,18 +79,17 @@ model Activity {
   budgetTier          BudgetTier
   seasonTags          String[]
   socialSetting       SocialSetting
-  linkedLocations     Location[]      @relation("ActivityLocations", references: [id])
-  linkedResources     Resource[]      @relation("ActivityResources", references: [id])
+  linkedLocations     Location[]      @relation("ActivityLocations")
+  linkedResources     Resource[]      @relation("ActivityResources")
   images              String[]
   published           Boolean         @default(false)
   status              ContentStatus   @default(PENDING)
   createdAt           DateTime        @default(now())
   author              User            @relation("ActivityAuthor", fields: [authorId], references: [id])
-  reviews             Review[]
 }
 
 model Location {
-  id            String           @id @default(cuid())
+  id            String          @id @default(cuid())
   name          String
   lat           Float
   lng           Float
@@ -108,18 +107,19 @@ model Location {
   recommended   String?
   externalIds   Json?
   lastVerified  DateTime?
-  status        LocationStatus @default(ACTIVE)
+  status        LocationStatus  @default(ACTIVE)
   createdAt     DateTime        @default(now())
   author        User            @relation("LocationAuthor", fields: [authorId], references: [id])
-  reviews       Review[]
+  activities    Activity[]      @relation("ActivityLocations")
+  resources     Resource[]      @relation("LocationResources")
 }
 
 model Itinerary {
-  id                   String          @id @default(cuid())
+  id                   String           @id @default(cuid())
   authorId             String
   title                String
   summary              String?
-  stops                Json            // array of {type, ref_id, user_note, duration_minutes}
+  stops                Json // array of {type, ref_id, user_note, duration_minutes}
   totalDurationMinutes Int?
   estimatedTotalCost   Int?
   travelRoutes         Json?
@@ -129,10 +129,9 @@ model Itinerary {
   tags                 TagOnItinerary[]
   collaborators        String[]
   packingList          Json?
-  published            Boolean         @default(true)
-  createdAt            DateTime        @default(now())
-  author               User            @relation("ItineraryAuthor", fields: [authorId], references: [id])
-  reviews              Review[]
+  published            Boolean          @default(true)
+  createdAt            DateTime         @default(now())
+  author               User             @relation("ItineraryAuthor", fields: [authorId], references: [id])
 }
 
 model Journal {
@@ -165,23 +164,26 @@ model Resource {
 }
 
 model Review {
-  id            String      @id @default(cuid())
-  userId        String
-  targetType    TargetType
-  targetId      String
-  budgetAmount  Int?
+  id             String     @id @default(cuid())
+  userId         String
+  targetType     TargetType
+  targetId       String
+  budgetAmount   Int?
   budgetCurrency String?
-  timeActual    Int?
-  ratings       Json?
-  text          String?
-  photos        String[]
-  createdAt     DateTime    @default(now())
-  user          User        @relation(fields: [userId], references: [id])
+  timeActual     Int?
+  ratings        Json?
+  text           String?
+  photos         String[]
+  createdAt      DateTime   @default(now())
+  user           User       @relation(fields: [userId], references: [id])
 }
 
 model Tag {
-  id    String @id @default(cuid())
-  value String @unique
+  id          String           @id @default(cuid())
+  value       String           @unique
+  activities  TagOnActivity[]
+  locations   TagOnLocation[]
+  itineraries TagOnItinerary[]
 }
 
 model TagOnActivity {
@@ -280,5 +282,3 @@ enum JournalFlair {
   COMPLETED
   MEMORY
 }
-
-
