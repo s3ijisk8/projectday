@@ -1,0 +1,273 @@
+// Prisma schema derived from PRD (MVP subset)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  username       String   @unique
+  passwordHash   String?
+  image          String?
+  avatarConfig   Json?
+  archetype      String
+  bio            String?
+  homeLat        Float?
+  homeLng        Float?
+  friends        User[]   @relation("UserFriends")
+  friendOf       User[]   @relation("UserFriends")
+  savedItems     SavedItem[]
+  activities     Activity[] @relation("ActivityAuthor")
+  locations      Location[] @relation("LocationAuthor")
+  itineraries    Itinerary[] @relation("ItineraryAuthor")
+  journals       Journal[] @relation("JournalAuthor")
+  reviews        Review[]
+  createdAt      DateTime @default(now())
+  accounts       Account[]
+  sessions       Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @map("refresh_token")
+  access_token      String? @map("access_token")
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Activity {
+  id                   String   @id @default(cuid())
+  authorId             String
+  title                String
+  description          String
+  tags                 TagOnActivity[]
+  style                ActivityStyle
+  timeEstimateMinutes  Int
+  energyLevel          EnergyLevel
+  budgetTier           BudgetTier
+  seasonTags           String[]
+  socialSetting        SocialSetting
+  linkedLocations      Location[] @relation("ActivityLocations", references: [id])
+  linkedResources      Resource[] @relation("ActivityResources", references: [id])
+  images               String[]
+  published            Boolean   @default(false)
+  status               ContentStatus @default(PENDING)
+  createdAt            DateTime  @default(now())
+  author               User      @relation("ActivityAuthor", fields: [authorId], references: [id])
+  reviews              Review[]
+}
+
+model Location {
+  id             String   @id @default(cuid())
+  name           String
+  lat            Float
+  lng            Float
+  address        String
+  authorId       String
+  hours          String?
+  costRange      String?
+  seatingTypes   String[]
+  crowdLevel     Int?
+  noiseLevel     Int?
+  lighting       String?
+  accessibility  Json?
+  tags           TagOnLocation[]
+  photos         String[]
+  recommended    String?
+  externalIds    Json?
+  lastVerified   DateTime?
+  status         LocationStatus @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  author         User      @relation("LocationAuthor", fields: [authorId], references: [id])
+  reviews        Review[]
+}
+
+model Itinerary {
+  id                   String   @id @default(cuid())
+  authorId             String
+  title                String
+  summary              String?
+  stops                Json     // array of {type, ref_id, user_note, duration_minutes}
+  totalDurationMinutes Int?
+  estimatedTotalCost   Int?
+  travelRoutes         Json?
+  mapPolyline          String?
+  playlistLink         String?
+  images               String[]
+  tags                 TagOnItinerary[]
+  collaborators        String[]
+  packingList          Json?
+  published            Boolean @default(true)
+  createdAt            DateTime @default(now())
+  author               User    @relation("ItineraryAuthor", fields: [authorId], references: [id])
+  reviews              Review[]
+}
+
+model Journal {
+  id                 String   @id @default(cuid())
+  authorId           String
+  title              String
+  linkedItineraryId  String?
+  content            String
+  moodRating         Int?
+  userPhotos         String[]
+  packingListUsed    Json?
+  friendsTagged      String[]
+  flair              JournalFlair
+  isPublic           Boolean @default(true)
+  createdAt          DateTime @default(now())
+  author             User     @relation("JournalAuthor", fields: [authorId], references: [id])
+}
+
+model Resource {
+  id                    String   @id @default(cuid())
+  title                 String
+  url                   String
+  description           String?
+  type                  ResourceType
+  associatedActivities  Activity[] @relation("ActivityResources")
+  associatedLocations   Location[] @relation("LocationResources")
+  curatedBy             String[]
+  createdAt             DateTime @default(now())
+  status                ContentStatus @default(PENDING)
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  userId       String
+  targetType   TargetType
+  targetId     String
+  budgetAmount Int?
+  budgetCurrency String?
+  timeActual   Int?
+  ratings      Json?
+  text         String?
+  photos       String[]
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model Tag {
+  id    String  @id @default(cuid())
+  value String  @unique
+}
+
+model TagOnActivity {
+  activityId String
+  tagId      String
+  activity   Activity @relation(fields: [activityId], references: [id])
+  tag        Tag      @relation(fields: [tagId], references: [id])
+  @@id([activityId, tagId])
+}
+
+model TagOnLocation {
+  locationId String
+  tagId      String
+  location   Location @relation(fields: [locationId], references: [id])
+  tag        Tag      @relation(fields: [tagId], references: [id])
+  @@id([locationId, tagId])
+}
+
+model TagOnItinerary {
+  itineraryId String
+  tagId       String
+  itinerary   Itinerary @relation(fields: [itineraryId], references: [id])
+  tag         Tag       @relation(fields: [tagId], references: [id])
+  @@id([itineraryId, tagId])
+}
+
+model SavedItem {
+  id        String @id @default(cuid())
+  userId    String
+  kind      TargetType
+  refId     String
+  createdAt DateTime @default(now())
+  user      User   @relation(fields: [userId], references: [id])
+}
+
+enum ResourceType {
+  ARTICLE
+  VIDEO
+  TUTORIAL
+  TOOL
+  SHOP
+  PODCAST
+}
+
+enum TargetType {
+  LOCATION
+  ACTIVITY
+  ITINERARY
+}
+
+enum ContentStatus {
+  PENDING
+  APPROVED
+}
+
+enum LocationStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+}
+
+enum ActivityStyle {
+  CREATIVE
+  MENTAL_WELLNESS
+  ACADEMIC
+  ACTIVE_LIGHT
+  ACTIVE_MODERATE
+  ACTIVE_HEAVY
+  BRAINLESS
+  THERAPEUTIC
+}
+
+enum EnergyLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SocialSetting {
+  SOLO
+  ONE_FRIEND
+  SMALL_GROUP
+}
+
+enum JournalFlair {
+  PLAN
+  COMPLETED
+  MEMORY
+}
+
+
